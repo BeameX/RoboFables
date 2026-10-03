@@ -1,34 +1,14 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
-  "metadata": {
-    "description": "Optional. Host RoboFables from a public zip. Choose latest, beta, or a numbered build."
-  },
   "parameters": {
-    "siteName": {
-      "type": "string",
-      "metadata": { "description": "Name of the App Service." }
-    },
-    "location": {
-      "type": "string",
-      "defaultValue": "westeurope",
-      "metadata": { "description": "Azure region." }
-    },
-    "channel": {
-      "type": "string",
-      "defaultValue": "latest",
-      "allowedValues": ["latest", "beta", "build"],
-      "metadata": { "description": "latest, beta, or a specific build number." }
-    },
-    "buildNumber": {
-      "type": "string",
-      "defaultValue": "1",
-      "metadata": { "description": "Used only when channel is build. Example: 1 for web-1." }
-    }
+    "siteName": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "westeurope" },
+    "channel": { "type": "string", "defaultValue": "latest", "allowedValues": ["latest", "beta", "build"] },
+    "buildNumber": { "type": "string", "defaultValue": "1" }
   },
   "variables": {
-    "packageTag": "[if(equals(parameters('channel'), 'build'), concat('web-', parameters('buildNumber')), concat('web-', parameters('channel')))]",
-    "packageUrl": "[concat('https://github.com/BeameX/RoboFables/releases/download/', variables('packageTag'), '/site.zip')]"
+    "hostPackage": "https://github.com/BeameX/RoboFables/releases/download/web-host/host.zip"
   },
   "resources": [
     {
@@ -49,23 +29,19 @@
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', concat(parameters('siteName'), '-plan'))]",
         "httpsOnly": true,
         "siteConfig": {
+          "appCommandLine": "node server.js",
           "appSettings": [
-            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "[variables('packageUrl')]" },
+            { "name": "WEBSITE_NODE_DEFAULT_VERSION", "value": "~18" },
+            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "[variables('hostPackage')]" },
             { "name": "ROBOFABLES_CHANNEL", "value": "[parameters('channel')]" },
-            { "name": "ROBOFABLES_BUILD", "value": "[parameters('buildNumber')]" }
+            { "name": "ROBOFABLES_BUILD", "value": "[parameters('buildNumber')]" },
+            { "name": "ROBOFABLES_DIR", "value": "D:\\home\\data\\robofables" }
           ]
         }
       }
     }
   ],
   "outputs": {
-    "url": {
-      "type": "string",
-      "value": "[concat('https://', parameters('siteName'), '.azurewebsites.net')]"
-    },
-    "packageUrl": {
-      "type": "string",
-      "value": "[variables('packageUrl')]"
-    }
+    "url": { "type": "string", "value": "[concat('https://', parameters('siteName'), '.azurewebsites.net')]" }
   }
 }
