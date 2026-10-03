@@ -10,6 +10,6 @@ This is the same update model SCEPman uses. The App Service setting `WEBSITE_RUN
 
 Change `ROBOFABLES_CHANNEL` or `ROBOFABLES_BUILD` in the template (or the package URL on the app) to switch. The last 10 numbered builds are kept.
 
-[Deploy to Azure](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FBeameX%2FRoboFables%2Fmain%2Fdeploy%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FBeameX%2FRoboFables%2Fmain%2Fdeploy%2Fazuredeploy.json)
 
 The zip is the static site. Its root must contain `index.html`.
