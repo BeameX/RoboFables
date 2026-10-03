@@ -293,12 +293,16 @@ export const SPIN_BLOCK_TYPES = new Set([
 export const LED_BLOCK_TYPES = new Set(['kl_lys_led']);
 
 /**
- * Toolbox contents depend on Device (Explore = arm, Go = drive/wheels).
+ * Toolbox contents depend on Device (Explore = arm, Go = drive/wheels) and Level.
+ * Simple = few blocks for the youngest; Full = today's complete toolbox.
  * Wheel transmit stays off: Go drive blocks are shown but generators and run stay gated.
- * My blocks uses a custom flyout (Create block plus saved blocks).
+ * My blocks uses a custom flyout (Create block plus saved blocks) — Full only.
+ * @param {string} band explore|go
+ * @param {string} [level] simple|full — default full for callers that omit it
  */
-export function buildToolboxJson(band) {
+export function buildToolboxJson(band, level) {
   const isGo = band === 'go';
+  const isSimple = level === 'simple';
   const contents = [];
   const pushCat = (id, blocks) => {
     const cat = CATEGORIES.find((c) => c.id === id);
@@ -311,15 +315,28 @@ export function buildToolboxJson(band) {
     });
   };
 
+  if (isSimple) {
+    if (isGo) {
+      // Go Simple: simplest drive stubs + wait / loops (still spin-gated)
+      pushCat('bevaegelse', ['kl_kør', 'kl_drej', 'kl_stop_hjul', 'kl_vent']);
+      pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
+    } else {
+      // Explore Simple: arm angle, wait, safe stop, loops only
+      pushCat('bevaegelse', ['kl_arm_angle', 'kl_vent', 'kl_stop_sikkert']);
+      pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
+    }
+    return { kind: 'categoryToolbox', contents };
+  }
+
   if (isGo) {
-    // Go: drive / turn / stop — shown, but wheel transmit stays gated
+    // Go Full: drive / turn / stop — shown, but wheel transmit stays gated
     pushCat('bevaegelse', ['kl_kør', 'kl_drej', 'kl_stop_hjul', 'kl_hjul', 'kl_vent']);
     pushCat('sans', ['kl_sans_afstand']);
     pushCat('lys', ['kl_lyd_tone', 'kl_lys_led']);
     pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
     pushCat('hvis', ['kl_hvis', 'kl_sammenlign']);
   } else {
-    // Explore: arm focused — lights stay gated and that category stays hidden
+    // Explore Full: arm focused — lights stay gated and that category stays hidden
     pushCat('bevaegelse', ['kl_arm_angle', 'kl_arm_xy', 'kl_vent', 'kl_stop_sikkert']);
     pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
     pushCat('hvis', ['kl_hvis', 'kl_sammenlign']);

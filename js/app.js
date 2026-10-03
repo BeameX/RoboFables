@@ -25,14 +25,35 @@ const BAND_LABELS = {
   go: 'Go',
 };
 
+const LEVEL_STORAGE_KEY = 'robolab.level';
+
 /** Normalize legacy mini/crew/kode (and unknown) to explore/go for the Device picker. */
 function normalizeDevice(band) {
   if (band === 'go' || band === 'crew') return 'go';
   return 'explore'; // explore, mini, kode, or anything else
 }
 
+function normalizeLevel(level) {
+  return level === 'full' ? 'full' : 'simple';
+}
+
+function readStoredLevel() {
+  try {
+    const v = localStorage.getItem(LEVEL_STORAGE_KEY);
+    if (v === 'full' || v === 'simple') return v;
+  } catch (_) { /* ignore */ }
+  return 'simple'; // first open = small set
+}
+
+function writeStoredLevel(level) {
+  try {
+    localStorage.setItem(LEVEL_STORAGE_KEY, normalizeLevel(level));
+  } catch (_) { /* ignore */ }
+}
+
 let workspace = null;
 let currentBand = 'explore';
+let currentLevel = readStoredLevel();
 let pose = { x: 0, y: 0 };
 let runToken = 0;
 /** Kid-facing USB link state (not LED/Spin gates). */
@@ -404,13 +425,36 @@ function updateMission(band) {
 function applyBand(band) {
   band = normalizeDevice(band);
   currentBand = band;
-  if (workspace) workspace.updateToolbox(buildToolboxJson(band));
+  if (workspace) workspace.updateToolbox(buildToolboxJson(band, currentLevel));
   document.getElementById('bandChip').textContent = BAND_LABELS[band];
   const sel = document.getElementById('bandSelect');
   if (sel && sel.value !== band) sel.value = band;
   updateMission(band);
   updateConnChip();
+  syncLevelUi();
   // Keep hide preference after toolbox rebuild
+  if (workspace) setToolboxVisible(readToolboxVisible());
+  else resizeBlockly();
+}
+
+/** Show/hide Full-only chrome (See the code) and keep the Level picker in sync. */
+function syncLevelUi() {
+  const sel = document.getElementById('levelSelect');
+  if (sel && sel.value !== currentLevel) sel.value = currentLevel;
+  const btnCode = document.getElementById('btnCode');
+  if (btnCode) {
+    const show = currentLevel === 'full';
+    btnCode.hidden = !show;
+    if (!show) setDrawer(false);
+  }
+}
+
+function applyLevel(level) {
+  level = normalizeLevel(level);
+  currentLevel = level;
+  writeStoredLevel(level);
+  if (workspace) workspace.updateToolbox(buildToolboxJson(currentBand, currentLevel));
+  syncLevelUi();
   if (workspace) setToolboxVisible(readToolboxVisible());
   else resizeBlockly();
 }
@@ -831,7 +875,7 @@ function initBlockly() {
   defineRoboBlocks();
   installPythonGenerators();
   workspace = Blockly.inject('blocklyDiv', {
-    toolbox: buildToolboxJson(currentBand),
+    toolbox: buildToolboxJson(currentBand, currentLevel),
     trashcan: true,
     media: 'vendor/blockly/media/',
     renderer: 'zelos',
@@ -888,7 +932,7 @@ function refreshMacroSelect() {
 
 function refreshEgneToolbox() {
   if (!workspace) return;
-  workspace.updateToolbox(buildToolboxJson(currentBand));
+  workspace.updateToolbox(buildToolboxJson(currentBand, currentLevel));
   setToolboxVisible(readToolboxVisible());
 }
 
@@ -963,6 +1007,7 @@ function bindMacrosUI() {
 
 async function boot() {
   document.getElementById('bandSelect').addEventListener('change', (e) => applyBand(e.target.value));
+  document.getElementById('levelSelect').addEventListener('change', (e) => applyLevel(e.target.value));
   document.getElementById('btnToolboxToggle').addEventListener('click', () => {
     setToolboxVisible(!readToolboxVisible());
   });
@@ -987,6 +1032,7 @@ async function boot() {
   populateModulePicker([], 0xa2);
   updateConnChip();
   applyBand(currentBand);
+  applyLevel(currentLevel);
   animatePose('X', 0);
   animatePose('Y', 0);
   bindProjectsUI({

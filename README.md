@@ -78,13 +78,14 @@ You need Python 3.11 or newer for this path. Windows, macOS, or Linux. No Shape 
 1. Plug in the USB dongle. Turn the joint robot on. Set both to the same colour.
 2. Start RoboFables: double-click **Start-RoboFables.bat** (zip), run `bridge_server.py` (above), or open the static page in Chrome or Edge (Web Serial).
 3. Choose **Device**. **Explore** is the arm. **Go** shows drive blocks (those stay off — see below).
-4. Press **Ports**. On the bridge, pick the dongle (a star marks the likely one). On Web Serial, click **Allow** for the dongle. Then press **Connect**.
-5. The chip should say **Connected**. The robot list uses the name from the sticker when the dongle reports one.
-6. Drag blocks from **Motion**, **Loops**, and **If**. The storyboard strip shows the top chain from left to right.
-7. Press **Preview** to animate the drawing on screen. Nothing is sent over USB.
-8. Press **Run** to send arm moves. **Safe stop** returns the arm to the centre.
-9. **Forever** keeps going until you press **Stop**. Stop ends the loop; it does not need a special block.
-10. Name the project and press **Save**. **Download project** writes a JSON file. **Upload project** reads one back. Projects live in the browser (`localStorage`) until you download them.
+4. Choose **Level** next to Device. **Simple** (the default) keeps a small set for the youngest — arm angle or the simplest drive stubs, wait, safe stop, repeat, and forever — and hides If, comparisons, My blocks, and See the code. **Full** restores the complete toolbox you already know (Motion, Loops, If, My blocks, See the code), and the choice is saved in the browser.
+5. Press **Ports**. On the bridge, pick the dongle (a star marks the likely one). On Web Serial, click **Allow** for the dongle. Then press **Connect**.
+6. The chip should say **Connected**. The robot list uses the name from the sticker when the dongle reports one.
+7. Drag blocks from **Motion**, **Loops**, and **If**. The storyboard strip shows the top chain from left to right.
+8. Press **Preview** to animate the drawing on screen. Nothing is sent over USB.
+9. Press **Run** to send arm moves. **Safe stop** returns the arm to the centre.
+10. **Forever** keeps going until you press **Stop**. Stop ends the loop; it does not need a special block.
+11. Name the project and press **Save**. **Download project** writes a JSON file. **Upload project** reads one back. Projects live in the browser (`localStorage`) until you download them.
 
 **Create block** (under **My blocks**) lets a class save a stack and reuse it. Type a name, put blocks inside, then press **Save as block**.
 
