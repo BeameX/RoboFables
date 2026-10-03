@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Optional. Host the RoboFables static site on Azure Static Web Apps and update it when the chosen GitHub branch changes."
+  },
+  "parameters": {
+    "siteName": {
+      "type": "string",
+      "metadata": { "description": "Name of the Static Web App." }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": { "description": "Azure region." }
+    },
+    "repositoryUrl": {
+      "type": "string",
+      "defaultValue": "https://github.com/BeameX/RoboFables",
+      "metadata": { "description": "GitHub repository that contains the site." }
+    },
+    "branch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": { "description": "Branch to publish. Later pushes to this branch update the site." }
+    },
+    "repositoryToken": {
+      "type": "securestring",
+      "metadata": { "description": "GitHub personal access token with repo scope, so Azure can read the repository and publish updates." }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('siteName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Free", "tier": "Free" },
+      "properties": {
+        "repositoryUrl": "[parameters('repositoryUrl')]",
+        "branch": "[parameters('branch')]",
+        "repositoryToken": "[parameters('repositoryToken')]",
+        "buildProperties": {
+          "appLocation": "/",
+          "apiLocation": "",
+          "outputLocation": ""
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "hostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('siteName'))).defaultHostname]"
+    }
+  }
+}
