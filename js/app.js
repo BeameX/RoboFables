@@ -19,6 +19,7 @@ import {
   findMacroById,
   getCallMacroId,
 } from './macros.js';
+import { findTrack, missionWorkspaceXml } from './missions.js';
 
 const BAND_LABELS = {
   explore: 'Explore',
@@ -26,6 +27,8 @@ const BAND_LABELS = {
 };
 
 const LEVEL_STORAGE_KEY = 'robolab.level';
+const MISSION_TRACK_KEY = 'robolab.missionTrack';
+const MISSION_INDEX_KEY = 'robolab.missionIndex';
 
 /** Normalize legacy mini/crew/kode (and unknown) to explore/go for the Device picker. */
 function normalizeDevice(band) {
@@ -410,16 +413,139 @@ function updateConnChip() {
   el.style.color = '#5dde8a';
 }
 
-function updateMission(band) {
-  const p = document.querySelector('.mission > p');
-  if (!p) return;
-  if (band === 'go') {
-    p.textContent =
-      'Go: build a drive with drive / turn / stop wheels (wheels stay off for now). Switch Device for the Explore arm.';
-  } else {
-    p.textContent =
-      'Explore: make the arm wave — wait → arm Y +30° → wait → safe stop. Switch Device to Go for driving.';
+function readStoredMission() {
+  let track = 'beginner';
+  let index = 0;
+  try {
+    const t = localStorage.getItem(MISSION_TRACK_KEY);
+    if (t === 'beginner' || t === 'experienced') track = t;
+    const n = Number(localStorage.getItem(MISSION_INDEX_KEY));
+    if (Number.isInteger(n) && n >= 0) index = n;
+  } catch (_) { /* ignore */ }
+  const spec = findTrack(track);
+  if (index >= spec.missions.length) index = 0;
+  return { track: spec.id, index };
+}
+
+function writeStoredMission(track, index) {
+  try {
+    localStorage.setItem(MISSION_TRACK_KEY, track);
+    localStorage.setItem(MISSION_INDEX_KEY, String(index));
+  } catch (_) { /* ignore */ }
+}
+
+let missionTrack = 'beginner';
+let missionIndex = 0;
+
+function currentMission() {
+  const spec = findTrack(missionTrack);
+  const index = Math.min(missionIndex, spec.missions.length - 1);
+  return { spec, index, mission: spec.missions[index] };
+}
+
+function renderMission() {
+  const { spec, index, mission } = currentMission();
+  missionTrack = spec.id;
+  missionIndex = index;
+  const trackSel = document.getElementById('missionTrack');
+  if (trackSel && trackSel.value !== spec.id) trackSel.value = spec.id;
+  const step = document.getElementById('missionStep');
+  if (step) step.textContent = `${index + 1} of ${spec.missions.length}`;
+  const title = document.getElementById('missionTitle');
+  if (title) title.textContent = mission.title;
+  const goal = document.getElementById('missionGoal');
+  if (goal) goal.textContent = mission.goal;
+  const prev = document.getElementById('btnMissionPrev');
+  const next = document.getElementById('btnMissionNext');
+  if (prev) prev.disabled = index <= 0;
+  if (next) next.disabled = index >= spec.missions.length - 1;
+  const list = document.getElementById('missionList');
+  if (list) {
+    list.innerHTML = '';
+    spec.missions.forEach((m, i) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = `${i + 1}. ${m.title}`;
+      if (i === index) btn.setAttribute('aria-current', 'true');
+      btn.addEventListener('click', () => selectMission(spec.id, i));
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
   }
+  updateMission(currentBand);
+}
+
+function selectMission(track, index) {
+  const spec = findTrack(track);
+  missionTrack = spec.id;
+  missionIndex = Math.max(0, Math.min(index, spec.missions.length - 1));
+  writeStoredMission(missionTrack, missionIndex);
+  renderMission();
+}
+
+function updateMission(band) {
+  const note = document.getElementById('missionDeviceNote');
+  if (!note) return;
+  const { spec } = currentMission();
+  const bits = [];
+  if (band === 'go') {
+    bits.push('These missions move the Explore arm. Switch Device to Explore to try them on the joint.');
+  }
+  if (spec.needsFull && currentLevel !== 'full') {
+    bits.push('This track uses the Full toolbox (both joints, forever, and if).');
+  }
+  note.textContent = bits.join(' ');
+}
+
+/** Drop the mission stack onto the canvas without clearing other stacks. */
+function addMissionSolution() {
+  if (!workspace) return;
+  const { spec, mission } = currentMission();
+  const tops = workspace.getTopBlocks(false);
+  let x = 24;
+  const y = 24;
+  if (tops.length) {
+    let maxRight = 24;
+    for (const b of tops) {
+      const xy = b.getRelativeToSurfaceXY();
+      const hw = b.getHeightWidth ? b.getHeightWidth() : { width: 140 };
+      maxRight = Math.max(maxRight, xy.x + (hw.width || 140) + 48);
+    }
+    x = maxRight;
+  }
+  const before = new Set(workspace.getAllBlocks(false).map((b) => b.id));
+  const xmlText = missionWorkspaceXml(mission, Math.round(x), y);
+  Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xmlText), workspace);
+  const added = workspace.getAllBlocks(false).filter((b) => !before.has(b.id));
+  const top = added.find((b) => !b.getParent()) || added[0];
+  if (top && workspace.centerOnBlock) {
+    try { workspace.centerOnBlock(top.id); } catch (_) { /* ignore */ }
+  }
+  const kept = tops.length
+    ? ' Added beside your other stacks — nothing was erased.'
+    : '';
+  const levelHint = spec.needsFull && currentLevel !== 'full'
+    ? ' Switch Level to Full to find these blocks in the toolbox.'
+    : '';
+  toast(`Solution added for “${mission.title}”.${kept}${levelHint}`);
+}
+
+function bindMissions() {
+  const stored = readStoredMission();
+  missionTrack = stored.track;
+  missionIndex = stored.index;
+  const trackSel = document.getElementById('missionTrack');
+  if (trackSel) {
+    trackSel.addEventListener('change', () => selectMission(trackSel.value, missionIndex));
+  }
+  const prev = document.getElementById('btnMissionPrev');
+  const next = document.getElementById('btnMissionNext');
+  if (prev) prev.addEventListener('click', () => selectMission(missionTrack, missionIndex - 1));
+  if (next) next.addEventListener('click', () => selectMission(missionTrack, missionIndex + 1));
+  const add = document.getElementById('btnAddSolution');
+  if (add) add.addEventListener('click', addMissionSolution);
+  renderMission();
 }
 
 function applyBand(band) {
@@ -455,6 +581,7 @@ function applyLevel(level) {
   writeStoredLevel(level);
   if (workspace) workspace.updateToolbox(buildToolboxJson(currentBand, currentLevel));
   syncLevelUi();
+  updateMission(currentBand);
   if (workspace) setToolboxVisible(readToolboxVisible());
   else resizeBlockly();
 }
@@ -1029,6 +1156,7 @@ async function boot() {
   document.getElementById('btnConnect').addEventListener('click', connectUsb);
   document.getElementById('btnModule').addEventListener('click', applyModuleId);
   initBlockly();
+  bindMissions();
   populateModulePicker([], 0xa2);
   updateConnChip();
   applyBand(currentBand);

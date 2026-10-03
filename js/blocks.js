@@ -339,7 +339,7 @@ export function buildToolboxJson(band, level) {
     // Explore Full: arm focused — lights stay gated and that category stays hidden
     pushCat('bevaegelse', ['kl_arm_angle', 'kl_arm_xy', 'kl_vent', 'kl_stop_sikkert']);
     pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
-    pushCat('hvis', ['kl_hvis', 'kl_sammenlign']);
+    pushCat('hvis', ['kl_hvis', 'kl_sammenlign', 'kl_tal']);
   }
 
   const egne = CATEGORIES.find((c) => c.id === 'egne');

@@ -78,7 +78,7 @@ You need Python 3.11 or newer for this path. Windows, macOS, or Linux. No Shape 
 1. Plug in the USB dongle. Turn the joint robot on. Set both to the same colour.
 2. Start RoboFables: double-click **Start-RoboFables.bat** (zip), run `bridge_server.py` (above), or open the static page in Chrome or Edge (Web Serial).
 3. Choose **Device**. **Explore** is the arm. **Go** shows drive blocks (those stay off — see below).
-4. Choose **Level** next to Device. **Simple** (the default) keeps a small set for the youngest — arm angle or the simplest drive stubs, wait, safe stop, repeat, and forever — and hides If, comparisons, My blocks, and See the code. **Full** restores the complete toolbox you already know (Motion, Loops, If, My blocks, See the code), and the choice is saved in the browser.
+4. Choose **Level** next to Device. **Simple** (the default) keeps a small set for the youngest — arm angle or the simplest drive stubs, wait, safe stop, repeat, and forever — and hides If, comparisons, My blocks, and See the code. **Full** restores the complete toolbox you already know (Motion, Loops, If, My blocks, See the code). On Explore, If also includes a plain number so a check does not need a sensor. The choice is saved in the browser.
 5. Press **Ports**. On the bridge, pick the dongle (a star marks the likely one). On Web Serial, click **Allow** for the dongle. Then press **Connect**.
 6. The chip should say **Connected**. The robot list uses the name from the sticker when the dongle reports one.
 7. Drag blocks from **Motion**, **Loops**, and **If**. The storyboard strip shows the top chain from left to right.
@@ -86,6 +86,8 @@ You need Python 3.11 or newer for this path. Windows, macOS, or Linux. No Shape 
 9. Press **Run** to send arm moves. **Safe stop** returns the arm to the centre.
 10. **Forever** keeps going until you press **Stop**. Stop ends the loop; it does not need a special block.
 11. Name the project and press **Save**. **Download project** writes a JSON file. **Upload project** reads one back. Projects live in the browser (`localStorage`) until you download them.
+
+The **Mission** panel sits beside the preview. Choose **Beginner** or **Experienced**. Each track is five Explore-arm missions that get harder one step at a time. Beginner uses wait, one joint angle, safe stop, and repeat. Experienced may use both joints, forever, and if — a number check, not a light, wheel, or sensor. The title and a short goal stay on screen; use Previous, Next, or the list. **Add solution** drops that stack onto the canvas beside anything already there (other stacks stay). The browser remembers the track and the mission.
 
 **Create block** (under **My blocks**) lets a class save a stack and reuse it. Type a name, put blocks inside, then press **Save as block**.
 

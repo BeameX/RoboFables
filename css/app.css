@@ -121,7 +121,7 @@ html, body {
 }
 .main-panels {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr minmax(260px, 320px);
   gap: 12px;
   min-height: 0;
   flex: 1 1 auto;
@@ -204,14 +204,66 @@ html, body {
   border-radius: var(--radius);
   border: 1px solid #2c3a4f;
   padding: 14px;
+  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .mission h2 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 1rem;
   color: var(--accent2);
 }
+.mission label { color: var(--muted); font-size: 0.8rem; }
+.mission select,
+.mission button {
+  border-radius: 10px;
+  border: 1px solid #3a4d66;
+  background: var(--panel2);
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.mission select { width: 100%; }
 .mission p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
-.stars { margin-top: 10px; letter-spacing: 2px; color: #f5c542; }
+.mission-step { font-size: 0.78rem !important; letter-spacing: 0.02em; }
+.mission-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.mission-nav { display: flex; gap: 8px; }
+.mission-nav button { flex: 1; }
+.mission-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+.mission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mission-list li { margin: 0; }
+.mission-list button {
+  width: 100%;
+  text-align: left;
+}
+.mission-list button[aria-current="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#btnAddSolution {
+  background: var(--accent);
+  color: #062a26;
+  border-color: transparent;
+  font-weight: 650;
+}
+#btnAddSolution:hover { filter: brightness(1.05); }
+.mission-device { font-size: 0.78rem !important; }
 
 .storyboard {
   display: flex;

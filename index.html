@@ -151,9 +151,22 @@
       </div>
       <aside class="mission" id="missionPanel">
         <h2>Mission</h2>
-        <p>Explore: make the arm wave — wait → arm Y +30° → wait → safe stop. Switch Device to Go for driving.</p>
-        <div class="stars">★☆☆</div>
-        <p class="mission-note">RoboFables · Blockly Apache 2.0 (offline)</p>
+        <label for="missionTrack">Track</label>
+        <select id="missionTrack">
+          <option value="beginner">Beginner</option>
+          <option value="experienced">Experienced</option>
+        </select>
+        <p class="mission-step" id="missionStep"></p>
+        <h3 class="mission-title" id="missionTitle"></h3>
+        <p class="mission-goal" id="missionGoal"></p>
+        <div class="mission-nav">
+          <button type="button" id="btnMissionPrev">Previous</button>
+          <button type="button" id="btnMissionNext">Next</button>
+        </div>
+        <ol class="mission-list" id="missionList"></ol>
+        <button type="button" id="btnAddSolution">Add solution</button>
+        <p class="mission-device" id="missionDeviceNote"></p>
+        <p class="mission-note">Explore arm · saved in this browser</p>
       </aside>
       </div>
     </section>
