@@ -108,7 +108,11 @@ A downloaded project is JSON (`format: "robolab-project"`). It stores the Blockl
 
 ## Deploy to Azure
 
-Optional. If you want the website on Azure, deploy it with the template in [deploy/azuredeploy.json](deploy/azuredeploy.json). Steps are in [deploy/azure.md](deploy/azure.md). The app serves a public zip, and a new zip at the same address is what updates the site. The template does not contain a subscription or a login.
+Optional. The button opens the Azure portal with this template already selected. You pick the subscription and resource group there. Nothing in the template is a subscription or a login.
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FBeameX%2FRoboFables%2Fmain%2Fdeploy%2Fazuredeploy.json)
+
+Steps and the update model are in [deploy/azure.md](deploy/azure.md). The app serves a public zip, and a new zip at the same address is what updates the site.
 
 ## Contributing
 
