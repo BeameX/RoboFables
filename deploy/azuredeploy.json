@@ -2,56 +2,54 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "Optional. Host the RoboFables static site on Azure Static Web Apps and update it when the chosen GitHub branch changes."
+    "description": "Optional. Host the RoboFables static site on App Service from a public zip URL. Replace the zip and restart the app to publish the next build."
   },
   "parameters": {
     "siteName": {
       "type": "string",
-      "metadata": { "description": "Name of the Static Web App." }
+      "metadata": { "description": "Name of the App Service. Becomes the hostname." }
     },
     "location": {
       "type": "string",
       "defaultValue": "westeurope",
       "metadata": { "description": "Azure region." }
     },
-    "repositoryUrl": {
+    "packageUrl": {
       "type": "string",
-      "defaultValue": "https://github.com/BeameX/RoboFables",
-      "metadata": { "description": "GitHub repository that contains the site." }
-    },
-    "branch": {
-      "type": "string",
-      "defaultValue": "main",
-      "metadata": { "description": "Branch to publish. Later pushes to this branch update the site." }
-    },
-    "repositoryToken": {
-      "type": "securestring",
-      "metadata": { "description": "GitHub personal access token with repo scope, so Azure can read the repository and publish updates." }
+      "defaultValue": "https://github.com/BeameX/RoboFables/releases/download/web/site.zip",
+      "metadata": { "description": "Public URL of the website zip. The zip root must contain index.html." }
     }
   },
   "resources": [
     {
-      "type": "Microsoft.Web/staticSites",
-      "apiVersion": "2022-03-01",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-09-01",
+      "name": "[concat(parameters('siteName'), '-plan')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "F1", "tier": "Free" },
+      "properties": { "reserved": false }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-09-01",
       "name": "[parameters('siteName')]",
       "location": "[parameters('location')]",
-      "sku": { "name": "Free", "tier": "Free" },
+      "dependsOn": ["[resourceId('Microsoft.Web/serverfarms', concat(parameters('siteName'), '-plan'))]"],
       "properties": {
-        "repositoryUrl": "[parameters('repositoryUrl')]",
-        "branch": "[parameters('branch')]",
-        "repositoryToken": "[parameters('repositoryToken')]",
-        "buildProperties": {
-          "appLocation": "/",
-          "apiLocation": "",
-          "outputLocation": ""
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', concat(parameters('siteName'), '-plan'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "appSettings": [
+            { "name": "WEBSITE_RUN_FROM_PACKAGE", "value": "[parameters('packageUrl')]" }
+          ]
         }
       }
     }
   ],
   "outputs": {
-    "hostName": {
+    "url": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('siteName'))).defaultHostname]"
+      "value": "[concat('https://', parameters('siteName'), '.azurewebsites.net')]"
     }
   }
 }
