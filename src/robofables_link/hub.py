@@ -3,6 +3,8 @@
 The HTTP bridge uses these helpers to list ports, ping the dongle, discover
 modules on the same colour channel, and move a joint. LED and wheel motion
 are not sent from here; the bridge refuses those routes.
+
+js/webserial.js speaks the same ping, discover, and joint bytes in the browser.
 """
 
 from __future__ import annotations

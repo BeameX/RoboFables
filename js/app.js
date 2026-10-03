@@ -8,7 +8,7 @@ import {
   SPIN_BLOCK_TYPES,
   LED_BLOCK_TYPES,
 } from './blocks.js';
-import * as bridge from './bridge.js';
+import * as bridge from './link.js';
 import { bindStoryboard, primaryStack } from './storyboard.js';
 import { bindProjectsUI } from './projects.js';
 import {
@@ -175,10 +175,17 @@ function kidifyHubMessage(raw, fallback) {
   return s;
 }
 
+function linkReadyLabel() {
+  if (bridge.transportMode() === 'webserial') return 'web serial';
+  if (bridge.transportMode() === 'bridge') return 'bridge ready';
+  return 'Chrome or Edge';
+}
+
 function clearConnected(kidMsg) {
   conn.linked = false;
   updateConnChip();
-  setUsbChip(conn.bridge ? (conn.port ? `USB ${conn.port}` : 'bridge ready') : 'bridge offline', !!conn.bridge);
+  const offline = bridge.transportMode() === 'none' ? 'Chrome or Edge' : 'bridge offline';
+  setUsbChip(conn.bridge ? (conn.port ? `USB ${conn.port}` : linkReadyLabel()) : offline, !!conn.bridge);
   if (kidMsg) toast(kidMsg, true, { sticky: true });
 }
 
@@ -244,7 +251,7 @@ function refreshCode() {
     const code = Blockly.Python.workspaceToCode(workspace);
     pre.textContent =
       'import time\n\n' +
-      '# Via the RoboFables bridge (joint move and ping)\n' +
+      '# Via RoboFables (joint move and ping)\n' +
       'def arm_set(axis, deg):\n    pass  # the Run button sends this\n\n' +
       'def play_tone(ms):\n    pass\n\n' +
       (code || 'pass  # empty program\n');
@@ -364,7 +371,9 @@ function updateConnChip() {
   const device = BAND_LABELS[currentBand] || 'Explore';
   if (!conn.bridge || !conn.linked) {
     el.textContent = 'Not connected';
-    el.title = conn.bridge
+    el.title = bridge.transportMode() === 'none'
+      ? 'Firefox and Safari cannot use the USB dongle. Open this page in Chrome or Edge.'
+      : conn.bridge
       ? (conn.port ? 'Press Connect — the robot should be on and the colours should match' : 'Choose a USB plug and press Connect')
       : 'Ask an adult to start RoboFables, choose a USB plug, and press Connect';
     el.style.borderColor = '';
@@ -667,7 +676,7 @@ async function runProgram({ previewOnly = false } = {}) {
     const health = await bridge.health().catch(() => null);
     if (!health || !health.ok) {
       conn.bridge = false;
-      clearConnected(KID.bridgeDown);
+      clearConnected(bridge.transportMode() === 'none' ? bridge.unsupportedMessage() : KID.bridgeDown);
       return;
     }
     conn.bridge = true;
@@ -714,45 +723,59 @@ function stopProgram() {
   toast('Stop');
 }
 
-async function refreshPorts() {
+async function refreshPorts({ pick = false } = {}) {
   const sel = document.getElementById('portSelect');
   sel.innerHTML = '';
   try {
-    const data = await bridge.listPorts();
+    const data = await bridge.listPorts({ pick });
     if (!data.ok) throw new Error(data.error || 'ports fail');
+    const web = bridge.transportMode() === 'webserial';
     for (const p of data.ports) {
       const opt = document.createElement('option');
       opt.value = p.device;
-      opt.textContent = `${p.likely_hub ? '★ ' : ''}${p.device} — ${p.description || ''}`;
+      opt.textContent = web
+        ? `${p.likely_hub ? '★ ' : ''}${p.description || 'USB serial'}`
+        : `${p.likely_hub ? '★ ' : ''}${p.device} — ${p.description || ''}`;
       sel.appendChild(opt);
     }
     if (!data.ports.length) {
       const opt = document.createElement('option');
       opt.value = '';
-      opt.textContent = '(no ports)';
+      opt.textContent = web ? '(press Ports, then Allow)' : '(no ports)';
       sel.appendChild(opt);
     }
     conn.bridge = true;
-    setUsbChip(`${data.ports.length} port(s)`, true);
+    setUsbChip(web ? (data.ports.length ? `${data.ports.length} dongle(s)` : 'web serial') : `${data.ports.length} port(s)`, true);
     updateConnChip();
   } catch (e) {
+    const mode = bridge.transportMode();
+    if (mode === 'webserial') {
+      conn.bridge = true;
+      conn.linked = false;
+      setUsbChip('web serial', false);
+      updateConnChip();
+      toast('Could not choose the USB dongle. Press Ports and click Allow.', true, { sticky: true });
+      return;
+    }
     conn.bridge = false;
     conn.linked = false;
-    setUsbChip('bridge offline', false);
+    setUsbChip(mode === 'none' ? 'Chrome or Edge' : 'bridge offline', false);
     updateConnChip();
-    toast(KID.portsFail, true, { sticky: true });
+    toast(mode === 'none' ? bridge.unsupportedMessage() : KID.portsFail, true, { sticky: true });
   }
 }
 
 async function connectUsb() {
-  const port = document.getElementById('portSelect').value;
+  const portSel = document.getElementById('portSelect');
+  const port = portSel.value;
   if (!port) { toast(KID.noPort, true, { sticky: true }); return; }
   const s = await bridge.selectPort(port);
   if (!s.ok) {
     clearConnected(KID.selectPortFail);
     return;
   }
-  conn.port = port;
+  const label = (portSel.selectedOptions[0] && portSel.selectedOptions[0].textContent) || port;
+  conn.port = String(label).replace(/^★\s*/, '');
   conn.bridge = true;
   let ping;
   try {
@@ -957,7 +980,7 @@ async function boot() {
   document.getElementById('btnPreview').addEventListener('click', () => runProgram({ previewOnly: true }));
   document.getElementById('btnRun').addEventListener('click', () => runProgram({ previewOnly: false }));
   document.getElementById('btnStop').addEventListener('click', stopProgram);
-  document.getElementById('btnRefreshPorts').addEventListener('click', refreshPorts);
+  document.getElementById('btnRefreshPorts').addEventListener('click', () => refreshPorts({ pick: true }));
   document.getElementById('btnConnect').addEventListener('click', connectUsb);
   document.getElementById('btnModule').addEventListener('click', applyModuleId);
   initBlockly();
@@ -990,9 +1013,11 @@ async function boot() {
   const dismissBtn = document.getElementById('toastDismiss');
   if (dismissBtn) dismissBtn.addEventListener('click', () => hideToast());
   startLinkPoll();
-  const h = await bridge.health().catch(() => null);
-  if (h && h.ok) {
+  const detected = await bridge.detect();
+  if (detected.mode === 'bridge') {
+    const h = detected.health;
     conn.bridge = true;
+    conn.via = 'bridge';
     if (h.port) {
       conn.port = h.port;
       // Port selected earlier this session — not linked until Connect and discover
@@ -1000,12 +1025,21 @@ async function boot() {
     }
     setUsbChip('bridge ready', true);
     updateConnChip();
-    await refreshPorts();
+    await refreshPorts({ pick: false });
+  } else if (detected.mode === 'webserial') {
+    conn.bridge = true;
+    conn.via = 'webserial';
+    conn.linked = false;
+    setUsbChip('web serial', true);
+    updateConnChip();
+    await refreshPorts({ pick: false });
   } else {
     conn.bridge = false;
+    conn.via = 'unsupported';
     conn.linked = false;
-    setUsbChip('start RoboFables', false);
+    setUsbChip('Chrome or Edge', false);
     updateConnChip();
+    toast(detected.message || bridge.unsupportedMessage(), true, { sticky: true });
   }
 }
 
