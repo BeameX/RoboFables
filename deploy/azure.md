@@ -1,15 +1,19 @@
 # Deploy to Azure
 
-Optional. Use this if you want the website on Azure. The template does not contain a subscription, tenant, or login.
+Optional. The template does not contain a subscription, tenant, or login.
 
-It creates a free App Service and points it at a **public zip**. The default zip is the `web` release of this repository:
+It creates a free App Service and runs a **public zip** (`WEBSITE_RUN_FROM_PACKAGE`). Pick a channel:
 
-`https://github.com/BeameX/RoboFables/releases/download/web/site.zip`
+- **latest** → `https://github.com/BeameX/RoboFables/releases/download/web-latest/site.zip`
+- **beta** → `https://github.com/BeameX/RoboFables/releases/download/web-beta/site.zip`
+- **build** plus a number, for example `1` → `https://github.com/BeameX/RoboFables/releases/download/web-1/site.zip`
 
-App Service runs that zip (`WEBSITE_RUN_FROM_PACKAGE`). When a new zip is published at the same URL, restart the app and it serves the new files. No workflow is added to the repository.
+Those three settings are `ROBOFABLES_CHANNEL` and `ROBOFABLES_BUILD` on the app. Changing them changes the zip address. App Service restarts when that setting changes, and then serves the zip.
+
+A new file at the **same** address does not restart the app by itself. Latest and beta are replaced in place, so after a new latest zip you restart the app once (or change the setting away and back). A numbered build never changes.
+
+Numbered releases are kept for the last 10 (`web-1` …). Older numbered releases are deleted when a newer one is published. `web-latest` and `web-beta` stay.
 
 [Deploy to Azure](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FBeameX%2FRoboFables%2Fmain%2Fdeploy%2Fazuredeploy.json)
 
-The zip root must contain `index.html`, plus `css/`, `js/`, and `vendor/`. It is the static site only, not the Windows starter zip and not the Python bridge.
-
-You need permission to create resources in the resource group you pick in the portal. Nothing in this folder deploys by itself.
+The zip root must contain `index.html`. It is the static site only, not the Windows starter zip.
