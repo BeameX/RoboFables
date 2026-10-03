@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoboFables</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <!-- Google Blockly Apache 2.0 — local vendor (see THIRD_PARTY.md) -->
+  <script src="vendor/blockly/blockly.min.js"></script>
+  <script src="vendor/blockly/python_compressed.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">RoboFables</span>
+      <label for="bandSelect">Device</label>
+      <select id="bandSelect">
+        <option value="explore" selected>Explore</option>
+        <option value="go">Go</option>
+      </select>
+      <span class="chip" id="bandChip">Explore</span>
+      <label for="portSelect">USB</label>
+      <select id="portSelect"><option value="">(load ports)</option></select>
+      <button type="button" id="btnRefreshPorts">Ports</button>
+      <button type="button" id="btnConnect">Connect</button>
+      <label for="moduleSelect">Robot</label>
+      <select id="moduleSelect" class="module-input" title="Name on the robot sticker">
+        <option value="0xA2" data-serial="J0B" selected>J0B</option>
+      </select>
+      <button type="button" id="btnModule">Set</button>
+      <span class="chip" id="usbChip">bridge?</span>
+      <span class="chip" id="connChip" title="USB connection">Not connected</span>
+      <span class="spacer"></span>
+      <button type="button" id="btnCode">See the code</button>
+      <button type="button" id="btnPreview">Preview</button>
+      <button type="button" class="primary" id="btnRun">Run</button>
+      <button type="button" class="danger" id="btnStop">Stop</button>
+    </header>
+
+    <section class="projects-bar" aria-label="Projects">
+      <label for="projectName">Project</label>
+      <input id="projectName" type="text" placeholder="Name…" maxlength="64" />
+      <button type="button" id="btnProjectSave">Save</button>
+      <select id="projectSelect"><option value="">(choose a project)</option></select>
+      <button type="button" id="btnProjectLoad">Open</button>
+      <button type="button" id="btnProjectDelete">Delete</button>
+      <button type="button" id="btnProjectDownload">Download project</button>
+      <button type="button" id="btnProjectUpload">Upload project</button>
+      <input type="file" id="projectFile" accept="application/json,.json" hidden />
+      <span class="bar-sep" aria-hidden="true"></span>
+      <label for="macroName">Block</label>
+      <input id="macroName" type="text" placeholder="Name…" maxlength="32" />
+      <button type="button" id="btnMacroSave" title="Save the Create block (and the blocks inside it) to My blocks">Save as block</button>
+      <select id="macroSelect"><option value="">(your blocks)</option></select>
+      <button type="button" id="btnMacroDelete" title="Delete the selected block">Delete block</button>
+    </section>
+
+    <section class="main" id="mainSection">
+      <div class="main-toolbar" aria-label="Show or hide panels">
+        <button type="button" id="btnPreviewToggle" class="panel-toggle" title="Hide preview" aria-pressed="true" aria-controls="stageWrap">Preview</button>
+        <button type="button" id="btnMissionToggle" class="panel-toggle" title="Hide mission" aria-pressed="true" aria-controls="missionPanel">Mission</button>
+      </div>
+      <div class="main-panels" id="mainPanels">
+      <div class="stage-wrap" id="stageWrap">
+        <span class="stage-label">Preview · X left/right · Y in/out</span>
+        <svg id="robotSvg" class="robot" viewBox="0 0 160 270" aria-label="Robot preview: X leans left and right, Y leans in and out">
+          <defs>
+            <linearGradient id="plasticWhite" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#f7f8fa"/>
+              <stop offset="45%" stop-color="#e8ebf0"/>
+              <stop offset="100%" stop-color="#cfd5de"/>
+            </linearGradient>
+            <linearGradient id="servoBlack" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3a3d45"/>
+              <stop offset="50%" stop-color="#1a1c22"/>
+              <stop offset="100%" stop-color="#0d0e12"/>
+            </linearGradient>
+            <filter id="glowSoft" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2.2" />
+            </filter>
+          </defs>
+
+          <text id="angleX" class="angle-readout" x="12" y="18">X 0°</text>
+          <text id="angleY" class="angle-readout" x="12" y="34">Y 0°</text>
+
+          <!-- Fixed white base with an original two-bar mark -->
+          <g class="joint-base" transform="translate(80 228)">
+            <ellipse cx="0" cy="14" rx="38" ry="8" fill="#0a1018" opacity="0.35"/>
+            <path d="M-36,4 C-38,-18 -28,-40 0,-44 C28,-40 38,-18 36,4
+                     C20,16 -20,16 -36,4 Z" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1.2"/>
+            <ellipse cx="0" cy="-8" rx="20" ry="9" fill="#ffffff" opacity="0.3"/>
+            <g class="base-glow" transform="translate(0 4)">
+              <rect x="-7" y="-7" width="4.5" height="14" rx="1.4" fill="#3dd66a"/>
+              <rect x="2.5" y="-7" width="4.5" height="14" rx="1.4" fill="#7dff9a"/>
+            </g>
+            <rect x="-7" y="-48" width="14" height="10" rx="3" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1"/>
+          </g>
+
+          <!-- X placement (static SVG translate). jointX animates via CSS rotate only — never mix CSS+SVG transform on same node. -->
+          <g transform="translate(80 180)">
+            <g id="jointX" class="joint-x">
+              <!-- X swivel UNDER Y: faceplate centered on Y axis; black X on white in middle. -->
+              <rect x="-17" y="0" width="34" height="26" rx="3.5" fill="url(#servoBlack)" stroke="#050608" stroke-width="1"/>
+              <rect x="-13" y="4" width="10" height="7" rx="1.2" fill="#2a2d35"/>
+              <!-- circular white swivel face centered under Y, 4 cardinal screws (12/3/6/9) -->
+              <circle cx="0" cy="13" r="14.5" fill="#f2f4f7" stroke="#9aa3b0" stroke-width="1.5"/>
+              <circle cx="0" cy="13" r="12" fill="none" stroke="#d5dae3" stroke-width="0.85"/>
+              <circle cx="0" cy="2.2" r="1.55" fill="#6b7380"/>
+              <circle cx="10.8" cy="13" r="1.55" fill="#6b7380"/>
+              <circle cx="0" cy="23.8" r="1.55" fill="#6b7380"/>
+              <circle cx="-10.8" cy="13" r="1.55" fill="#6b7380"/>
+              <text x="0" y="16.6" text-anchor="middle" font-size="11" font-weight="700"
+                    font-family="Segoe UI, system-ui, sans-serif" fill="#111">X</text>
+              <circle cx="0" cy="28.5" r="3.5" fill="#9aa3b0" stroke="#6b7380" stroke-width="0.8"/>
+              <!-- coupler up to Y hinge -->
+              <rect x="-9" y="-18" width="18" height="16" rx="3" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1"/>
+
+              <!-- Y placement + SVG foreshortening (jointYPivot). jointY = CSS perspective rotateX. -->
+              <g id="jointYPivot" transform="translate(0 -44)">
+                <g id="jointY" class="joint-y">
+                  <rect x="-28" y="-6" width="10" height="34" rx="3" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1"/>
+                  <rect x="18" y="-6" width="10" height="34" rx="3" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1"/>
+                  <rect x="-28" y="22" width="56" height="10" rx="3" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1"/>
+                  <rect x="-18" y="-4" width="36" height="28" rx="4" fill="url(#servoBlack)" stroke="#050608" stroke-width="1"/>
+                  <rect x="-14" y="0" width="12" height="8" rx="1.5" fill="#2a2d35"/>
+                  <circle cx="8" cy="10" r="9" fill="#f4f6f8" stroke="#1a1c22" stroke-width="1.2"/>
+                  <text x="8" y="14" text-anchor="middle" font-size="11" font-weight="700"
+                        font-family="Segoe UI, system-ui, sans-serif" fill="#111">Y</text>
+                  <circle cx="0" cy="28" r="3.8" fill="#9aa3b0" stroke="#6b7380" stroke-width="0.8"/>
+
+                  <g class="joint-head" transform="translate(0 -40)">
+                    <path d="M-30,18 C-32,-6 -22,-26 0,-28 C22,-26 32,-6 30,18
+                             C16,26 -16,26 -30,18 Z" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1.2"/>
+                    <ellipse cx="0" cy="-2" rx="16" ry="7" fill="#ffffff" opacity="0.28"/>
+                    <ellipse cx="0" cy="-20" rx="13" ry="5.5" fill="#d5dae3" stroke="#aeb6c2" stroke-width="1"/>
+                    <ellipse cx="0" cy="-22" rx="9" ry="3.5" fill="#1a2230" opacity="0.35"/>
+                    <rect x="-16" y="-38" width="5" height="14" rx="2" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="0.9"/>
+                    <rect x="11" y="-38" width="5" height="14" rx="2" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="0.9"/>
+                    <rect x="-7" y="16" width="14" height="10" rx="3" fill="url(#plasticWhite)" stroke="#b8c0cc" stroke-width="1"/>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <aside class="mission" id="missionPanel">
+        <h2>Mission</h2>
+        <p>Explore: make the arm wave — wait → arm Y +30° → wait → safe stop. Switch Device to Go for driving.</p>
+        <div class="stars">★☆☆</div>
+        <p class="mission-note">RoboFables · Blockly Apache 2.0 (offline)</p>
+      </aside>
+      </div>
+    </section>
+
+    <section class="storyboard" aria-label="Storyboard">
+      <div class="storyboard-head">
+        <span>Storyboard · left → right</span>
+        <span>Primary block chain</span>
+      </div>
+      <div id="storyStrip" class="story-strip" role="list"></div>
+      <div class="storyboard-head storyboard-head-blocks">
+        <span class="blocks-head">
+          <button type="button" id="btnToolboxToggle" class="toolbox-toggle" title="Hide toolbox" aria-pressed="true" aria-controls="blocklyArea">☰</button>
+          <span>Blocks</span>
+        </span>
+        <span id="toolboxHint">Drag from the toolbox</span>
+      </div>
+      <div id="blocklyArea"><div id="blocklyDiv"></div></div>
+    </section>
+
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer" aria-label="Python drawer">
+    <header>
+      <h2>See the code (Python)</h2>
+      <button type="button" id="btnCloseDrawer">Close</button>
+    </header>
+    <pre id="codeOut"># …</pre>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast-msg" id="toastMsg"></span>
+    <button type="button" class="toast-dismiss" id="toastDismiss" aria-label="Dismiss message" hidden>×</button>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
