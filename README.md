@@ -108,7 +108,7 @@ A downloaded project is JSON (`format: "robolab-project"`). It stores the Blockl
 
 ## Deploy to Azure
 
-Optional. If you want the website on Azure, deploy it with the template in [deploy/azuredeploy.json](deploy/azuredeploy.json). Steps are in [deploy/azure.md](deploy/azure.md). A push to the branch you choose then updates the site. The template does not contain a subscription or a login.
+Optional. If you want the website on Azure, deploy it with the template in [deploy/azuredeploy.json](deploy/azuredeploy.json). Steps are in [deploy/azure.md](deploy/azure.md). The app serves a public zip, and a new zip at the same address is what updates the site. The template does not contain a subscription or a login.
 
 ## Contributing
 
