@@ -108,7 +108,7 @@ A downloaded project is JSON (`format: "robolab-project"`). It stores the Blockl
 
 ## Deploy to Azure
 
-Optional. The static page can be hosted on Azure Static Web Apps so Chrome and Edge get HTTPS, which Web Serial needs. Azure does not run Python, and it does not host the Windows zip or the bridge. Nothing is deployed until you add the secrets in [deploy/azure.md](deploy/azure.md). A push to `main` still succeeds when those secrets are absent.
+Optional. If you want the website on Azure, deploy it with the template in [deploy/azuredeploy.json](deploy/azuredeploy.json). Steps are in [deploy/azure.md](deploy/azure.md). A push to the branch you choose then updates the site. The template does not contain a subscription or a login.
 
 ## Contributing
 
