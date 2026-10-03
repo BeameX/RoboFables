@@ -1,18 +1,18 @@
 # RoboFables
 
-RoboFables is a block-coding web app for classroom robots. Kids drag blocks, watch a preview of the arm, and press **Run** to move a joint over a USB wireless dongle.
+RoboFables is a block-coding web app for classroom robots. Drag blocks, watch a preview of the arm, and press **Run** to move a joint over a USB wireless dongle.
 
 RoboFables is an open-source block-coding app for classroom robots, written as an independent alternative to Fable Blockly.
 
-One codebase, two ways to run the same page. The UI is plain HTML, CSS, and JavaScript on top of [Google Blockly](https://github.com/google/blockly) (Apache 2.0), vendored offline under `vendor/blockly/`. There is no vendor SDK and no cloud account. Lights and wheels stay off.
+One codebase, two ways to run the same page. The UI is plain HTML, CSS, and JavaScript on top of [Google Blockly](https://github.com/google/blockly) (Apache 2.0), vendored offline under `vendor/blockly/`. There is no vendor SDK and no cloud account.
 
 Preview works with no dongle. **Run** needs the dongle and a robot on the **same colour channel**.
 
 ## Zip edition (Windows, no Python install)
 
-For a kid on Windows: unzip **RoboFables-win64.zip** and double-click **Start-RoboFables.bat**.
+On Windows: unzip **RoboFables-win64.zip** and double-click **Start-RoboFables.bat**.
 
-That starts the bundled Python and opens **[http://127.0.0.1:8765/](http://127.0.0.1:8765/)** in the browser. The kid does not install Python, pip, or a driver package.
+That starts the bundled Python and opens **[http://127.0.0.1:8765/](http://127.0.0.1:8765/)** in the browser. You do not install Python, pip, or a driver package.
 
 The zip is a build output (`dist/`, not committed). On a machine with network, from this folder:
 
@@ -24,7 +24,7 @@ The script downloads the official Windows embeddable CPython 3.12 zip (64-bit) f
 
 ## Web edition (no local Python)
 
-The web build is these same files, served by any static host. Open the page in **Chrome** or **Edge**. Press **Ports**, pick the USB dongle, and click **Allow**. The page then talks to the dongle with the Web Serial API (`navigator.serial`): ping, discover, and joint position — the same bytes as the Python bridge. Lights and wheels are not sent.
+The web build is these same files, served by any static host. Open the page in **Chrome** or **Edge**. Press **Ports**, pick the USB dongle, and click **Allow**. The page then talks to the dongle with the Web Serial API (`navigator.serial`): ping, discover, and joint position — the same bytes as the Python bridge.
 
 **Firefox and Safari** cannot do this. The page shows a short message and asks for Chrome or Edge. Web Serial also needs `https` or `localhost` (opening the HTML file directly will not see the dongle).
 
@@ -78,7 +78,7 @@ You need Python 3.11 or newer for this path. Windows, macOS, or Linux. No Shape 
 1. Plug in the USB dongle. Turn the joint robot on. Set both to the same colour.
 2. Start RoboFables: double-click **Start-RoboFables.bat** (zip), run `bridge_server.py` (above), or open the static page in Chrome or Edge (Web Serial).
 3. Choose **Device**. **Explore** is the arm. **Go** shows drive blocks (those stay off — see below).
-4. Choose **Level** next to Device. **Simple** (the default) keeps a small set for the youngest — arm angle or the simplest drive stubs, wait, safe stop, repeat, and forever — and hides If, comparisons, My blocks, and See the code. **Full** restores the complete toolbox you already know (Motion, Loops, If, My blocks, See the code). On Explore, If also includes a plain number so a check does not need a sensor. The choice is saved in the browser.
+4. Choose **Level** next to Device. **Simple** (the default) keeps a smaller set — arm angle or the simplest drive stubs, wait, safe stop, repeat, and forever — and hides If, comparisons, My blocks, and See the code. **Full** restores the complete toolbox you already know (Motion, Loops, If, My blocks, See the code). On Explore, If also includes a plain number so a check does not need a sensor. The choice is saved in the browser.
 5. Press **Ports**. On the bridge, pick the dongle (a star marks the likely one). On Web Serial, click **Allow** for the dongle. Then press **Connect**.
 6. The chip should say **Connected**. The robot list uses the name from the sticker when the dongle reports one.
 7. Drag blocks from **Motion**, **Loops**, and **If**. The storyboard strip shows the top chain from left to right.
@@ -91,7 +91,7 @@ The **Mission** panel sits beside the preview. Choose **Beginner** or **Experien
 
 **Create block** (under **My blocks**) lets a class save a stack and reuse it. Type a name, put blocks inside, then press **Save as block**.
 
-**See the code** opens a Python reading of the same stacks. It is a view for curious kids, not a second program you have to run.
+**See the code** opens a Python reading of the same stacks. It is a view of the same program, not a second one you have to run.
 
 ## What is turned off on purpose
 
@@ -105,6 +105,10 @@ Joint moves, dongle ping, and discover stay on.
 ## Projects
 
 A downloaded project is JSON (`format: "robolab-project"`). It stores the Blockly workspace, the device mode (Explore or Go), and any custom blocks that program uses. Nothing is uploaded to a server.
+
+## Deploy to Azure
+
+Optional. The static page can be hosted on Azure Static Web Apps so Chrome and Edge get HTTPS, which Web Serial needs. Azure does not run Python, and it does not host the Windows zip or the bridge. Nothing is deployed until you add the secrets in [deploy/azure.md](deploy/azure.md). A push to `main` still succeeds when those secrets are absent.
 
 ## Contributing
 
