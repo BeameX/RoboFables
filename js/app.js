@@ -85,21 +85,21 @@ function findModuleHit(modules, mid) {
   return (modules || []).find((m) => (Number(m.module_id) & 0xff) === id) || null;
 }
 
-/** Populate Robot picker with sticker names; option values stay module_id for USB TX. */
+/** Populate Robot picker from robots the dongle actually saw. Empty until then. */
 function populateModulePicker(modules, selectedId) {
   const sel = document.getElementById('moduleSelect');
   if (!sel) return;
-  const prev = selectedId != null ? Number(selectedId) & 0xff : null;
+  const prev = selectedId != null && selectedId !== '' ? Number(selectedId) & 0xff : null;
   const list = Array.isArray(modules) ? modules.slice() : [];
-  // Ensure default / selected id is present even if discover was empty
-  const ids = new Set(list.map((m) => Number(m.module_id) & 0xff));
-  if (prev != null && !ids.has(prev)) {
-    list.push({ module_id: prev, serial: serialForModule(prev, ''), type_name: 'Joint' });
-  }
-  if (!list.length) {
-    list.push({ module_id: 0xa2, serial: 'J0B', type_name: 'Joint' });
-  }
   sel.innerHTML = '';
+  if (!list.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'None yet';
+    sel.appendChild(opt);
+    conn.robotSerial = '';
+    return;
+  }
   for (const m of list) {
     const mid = Number(m.module_id) & 0xff;
     const name = serialForModule(mid, m.serial);
@@ -110,7 +110,7 @@ function populateModulePicker(modules, selectedId) {
     opt.textContent = kind && kind !== 'Joint' ? `${name} (${kind})` : name;
     sel.appendChild(opt);
   }
-  const want = prev != null ? hexModuleId(prev) : hexModuleId(0xa2);
+  const want = prev != null ? hexModuleId(prev) : '';
   if ([...sel.options].some((o) => o.value === want)) sel.value = want;
   else if (sel.options.length) sel.selectedIndex = 0;
   const chosen = sel.options[sel.selectedIndex];
@@ -124,8 +124,8 @@ function applyModulesFromDiscover(d) {
   if (mid == null && mods.length) mid = Number(mods[0].module_id);
   const hit = mid != null ? findModuleHit(mods, mid) : null;
   const fromApi = (d && d.serial) || (hit && hit.serial) || '';
-  conn.robotSerial = serialForModule(mid != null ? mid : 0xa2, fromApi);
-  populateModulePicker(mods, mid != null ? mid : 0xa2);
+  conn.robotSerial = mid != null ? serialForModule(mid, fromApi) : '';
+  populateModulePicker(mods, mid);
 }
 
 /** Kid-facing copy — no hex / API / bridge jargon in the bottom toast. */
@@ -207,6 +207,9 @@ function linkReadyLabel() {
 
 function clearConnected(kidMsg) {
   conn.linked = false;
+  conn.robotSerial = '';
+  conn.modules = [];
+  populateModulePicker([], null);
   updateConnChip();
   const offline = bridge.transportMode() === 'none' ? 'Chrome or Edge' : 'bridge offline';
   setUsbChip(conn.bridge ? (conn.port ? `USB ${conn.port}` : linkReadyLabel()) : offline, !!conn.bridge);
@@ -1157,7 +1160,7 @@ async function boot() {
   document.getElementById('btnModule').addEventListener('click', applyModuleId);
   initBlockly();
   bindMissions();
-  populateModulePicker([], 0xa2);
+  populateModulePicker([], null);
   updateConnChip();
   applyBand(currentBand);
   applyLevel(currentLevel);
