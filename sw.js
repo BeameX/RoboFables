@@ -1,5 +1,5 @@
 /* RoboFables app shell. Network first, so a reload picks up a new version. */
-const CACHE = 'robofables-shell-2';
+const CACHE = 'robofables-shell-3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
