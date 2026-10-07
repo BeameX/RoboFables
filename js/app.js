@@ -20,10 +20,19 @@ import {
   getCallMacroId,
 } from './macros.js';
 import { findTrack, missionWorkspaceXml } from './missions.js';
+import {
+  FG_BLOCK_TYPES,
+  FG_STATEMENT_TYPES,
+  simExec,
+  simValue,
+  simStopWheels,
+  mountSimPanel,
+  showSimPanel,
+} from './fablego.js';
 
 const BAND_LABELS = {
   explore: 'Explore',
-  go: 'Go',
+  go: 'Fable Go',
 };
 
 const LEVEL_STORAGE_KEY = 'robolab.level';
@@ -561,10 +570,39 @@ function applyBand(band) {
   updateMission(band);
   updateConnChip();
   syncLevelUi();
+  syncStageForDevice(band);
   // Keep hide preference after toolbox rebuild
   if (workspace) setToolboxVisible(readToolboxVisible());
   else resizeBlockly();
 }
+
+/** Explore shows the arm picture; Fable Go shows the top-down simulator with pretend sensors. */
+function syncStageForDevice(band) {
+  const isGo = band === 'go';
+  const svg = document.getElementById('robotSvg');
+  if (svg) svg.style.display = isGo ? 'none' : '';
+  const label = document.querySelector('#stageWrap .stage-label');
+  if (label) label.textContent = isGo ? 'Preview · Fable Go seen from above' : 'Preview · X left/right · Y in/out';
+  showSimPanel(isGo);
+}
+
+/** Evaluate a value block (number/true-false) for Preview. Unknown blocks read as 0/false. */
+function evalValue(b) {
+  if (!b) return 0;
+  const t = b.type;
+  if (t === 'kl_tal') return Number(b.getFieldValue('NUM')) || 0;
+  if (t === 'kl_sammenlign') {
+    const a = Number(evalValue(b.getInputTargetBlock('A')));
+    const c = Number(evalValue(b.getInputTargetBlock('B')));
+    const op = b.getFieldValue('OP');
+    return op === 'GT' ? a > c : op === 'LT' ? a < c : a === c;
+  }
+  if (FG_BLOCK_TYPES.has(t)) return simValue(t, (n) => b.getFieldValue(n));
+  return 0;
+}
+
+const FG_REAL_ROBOT_MSG =
+  'Fable Go blocks only work in Preview for now — they have not been tested on a real Fable Go yet. Press Preview to try your program on screen.';
 
 /** Show/hide Full-only chrome (See the code) and keep the Level picker in sync. */
 function syncLevelUi() {
@@ -723,6 +761,7 @@ async function execSteps(steps, my, previewOnly, depth = 0) {
         }
         const ok = await execSteps(body, my, previewOnly, depth);
         if (!ok) return false;
+        await sleep(20);
       }
       return false; // stopped
     } else if (t === 'kl_kald_makro') {
@@ -741,6 +780,9 @@ async function execSteps(steps, my, previewOnly, depth = 0) {
       const g = assertGate('SPIN');
       toast(g.ok ? 'Wheels in a block' : KID.gatedSpin, !g.ok);
       if (!g.ok) return false;
+    } else if (FG_STATEMENT_TYPES.has(t)) {
+      if (!previewOnly) { toast(FG_REAL_ROBOT_MSG, true, { sticky: true }); return false; }
+      await simExec(t, (n) => f[n], () => my === runToken);
     } else if (t === 'kl_lyd_tone') {
       await sleep(Number(f.MS) || 200);
     }
@@ -815,11 +857,22 @@ async function execChain(startBlock, my, previewOnly) {
         }
         const ok = await execChain(inner, my, previewOnly);
         if (!ok) return false;
+        await sleep(20); // let the page breathe (sensor sliders, Stop) between rounds
       }
       return false; // Stop
     } else if (LED_BLOCK_TYPES.has(t) || SPIN_BLOCK_TYPES.has(t)) {
       toast('That block is turned off for now — ask a teacher.', true);
       return false;
+    } else if (FG_STATEMENT_TYPES.has(t)) {
+      // TODO(fable-go): real robot path via bridge/Web Serial once tested; Run is blocked before this today.
+      if (!previewOnly) { toast(FG_REAL_ROBOT_MSG, true, { sticky: true }); return false; }
+      const blk = cur;
+      await simExec(t, (n) => blk.getFieldValue(n), () => my === runToken);
+    } else if (t === 'kl_hvis') {
+      if (evalValue(cur.getInputTargetBlock('COND'))) {
+        const ok = await execChain(cur.getInputTargetBlock('DO'), my, previewOnly);
+        if (!ok) return false;
+      }
     } else if (t === 'kl_lyd_tone') {
       await sleep(Number(cur.getFieldValue('MS')));
     }
@@ -840,6 +893,12 @@ async function runProgram({ previewOnly = false } = {}) {
       const g = assertGate('SPIN');
       if (!g.ok) { toast(b.type && LED_BLOCK_TYPES.has(b.type) ? KID.gatedLed : KID.gatedSpin, true); return; }
     }
+  }
+
+  if (!previewOnly && workspace.getAllBlocks(false).some((b) => FG_BLOCK_TYPES.has(b.type))) {
+    // Safety: nothing Fable Go is sent to a real robot until it has been tested on one.
+    toast(FG_REAL_ROBOT_MSG, true, { sticky: true });
+    return;
   }
 
   if (!previewOnly) {
@@ -887,12 +946,14 @@ async function runProgram({ previewOnly = false } = {}) {
       toast(kidifyHubMessage(raw, 'Something went wrong in the preview'), true);
     }
   } finally {
+    simStopWheels();
     document.getElementById('robotSvg').classList.remove('running');
   }
 }
 
 function stopProgram() {
   runToken++;
+  simStopWheels();
   document.getElementById('robotSvg').classList.remove('running');
   toast('Stop');
 }
@@ -1136,6 +1197,7 @@ function bindMacrosUI() {
 }
 
 async function boot() {
+  mountSimPanel(document.getElementById('stageWrap'));
   document.getElementById('bandSelect').addEventListener('change', (e) => applyBand(e.target.value));
   document.getElementById('levelSelect').addEventListener('change', (e) => applyLevel(e.target.value));
   document.getElementById('btnToolboxToggle').addEventListener('click', () => {
