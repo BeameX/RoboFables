@@ -93,6 +93,16 @@ The **Mission** panel sits beside the preview. Choose **Beginner** or **Experien
 
 **See the code** opens a Python reading of the same stacks. It is a view of the same program, not a second one you have to run.
 
+## Fable Go
+
+Pick **Fable Go** under Device to get blocks for the driving robot (a Fable Spin module with two wheels). The Explore arm blocks are hidden while Fable Go is chosen, and the other way round.
+
+- **Simple:** drive forward/backward/left/right, stop driving, wait, headlights, distance sensor (left/centre/right), something closer than %, sees colour (8 colours), loops, and if with compare.
+- **Full:** everything in Simple, plus wheel speeds A/B, drive a distance, turn by degrees, status light colour, send IR message, the red/green/blue amount from a colour sensor, room/reflected light, got IR message, wheel angle, wheels moving, battery, and My blocks.
+- **Preview only for now.** We do not have a Fable Go to test with, so **Run** shows a friendly message and sends nothing to the robot. **Preview** runs your program on a top-down simulator. The "Pretend sensors" sliders stand in for the distance, colour, light, IR and battery sensors.
+- The code lives in `js/fablego.js`: block definitions, "See the code" text, the simulator, and the Spin register numbers for a later real-robot driver (look for `TODO(fable-go)`). The toolbox is chosen in `buildToolboxJson` in `js/blocks.js`.
+- These are RoboFables' own blocks. None of them are copied from Shape Robotics software. Sensor left/centre/right means as you look at the front of the robot.
+
 ## What is turned off on purpose
 
 Lights (**LED**) and wheel / spin commands are **gated off** in `js/gates.js`, in `js/webserial.js` (those commands are never sent), and again on the bridge (`/api/led`, `/api/spin`, and `/api/wheels` answer 403).

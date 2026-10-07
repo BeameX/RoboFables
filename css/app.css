@@ -651,3 +651,4 @@ html, body {
 .go-sim-sensors label { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 .go-sim-sensors input[type=range] { flex: 1; }
 .go-sim-sensors output { width: 2.2em; text-align: right; }
+.stage-wrap:has(.go-sim:not([hidden])) { overflow: auto; justify-content: flex-start; }
