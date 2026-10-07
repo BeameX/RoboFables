@@ -4,6 +4,7 @@ import {
   renameMacro,
   buildEgneFlyout,
 } from './macros.js';
+import { defineFableGoBlocks, installFableGoGenerators, FG_TOOLBOX } from './fablego.js';
 
 /**
  * Shared categories (English). Motion contents differ by Device (Explore vs Go).
@@ -40,6 +41,7 @@ export function setEgneRefreshHook(fn) {
 }
 
 export function defineRoboBlocks() {
+  defineFableGoBlocks();
   Blockly.defineBlocksWithJsonArray([
     // ── Explore (Joint / arm) ──────────────────────────────────────────
     {
@@ -315,27 +317,19 @@ export function buildToolboxJson(band, level) {
     });
   };
 
-  if (isSimple) {
-    if (isGo) {
-      // Go Simple: simplest drive stubs + wait / loops (still spin-gated)
-      pushCat('bevaegelse', ['kl_kør', 'kl_drej', 'kl_stop_hjul', 'kl_vent']);
-      pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
-    } else {
-      // Explore Simple: arm angle, wait, safe stop, loops only
-      pushCat('bevaegelse', ['kl_arm_angle', 'kl_vent', 'kl_stop_sikkert']);
-      pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
-    }
+  if (isGo) {
+    // Fable Go: its own drive + sensor blocks (js/fablego.js). Explore arm blocks stay hidden.
+    // The older kl_kør / kl_drej / kl_hjul blocks stay defined so old projects still open.
+    for (const [cat, types] of FG_TOOLBOX[isSimple ? 'simple' : 'full']) pushCat(cat, types);
+    if (isSimple) return { kind: 'categoryToolbox', contents };
+  } else if (isSimple) {
+    // Explore Simple: arm angle, wait, safe stop, loops only
+    pushCat('bevaegelse', ['kl_arm_angle', 'kl_vent', 'kl_stop_sikkert']);
+    pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
     return { kind: 'categoryToolbox', contents };
   }
 
-  if (isGo) {
-    // Go Full: drive / turn / stop — shown, but wheel transmit stays gated
-    pushCat('bevaegelse', ['kl_kør', 'kl_drej', 'kl_stop_hjul', 'kl_hjul', 'kl_vent']);
-    pushCat('sans', ['kl_sans_afstand']);
-    pushCat('lys', ['kl_lyd_tone', 'kl_lys_led']);
-    pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
-    pushCat('hvis', ['kl_hvis', 'kl_sammenlign']);
-  } else {
+  if (!isGo) {
     // Explore Full: arm focused — lights stay gated and that category stays hidden
     pushCat('bevaegelse', ['kl_arm_angle', 'kl_arm_xy', 'kl_vent', 'kl_stop_sikkert']);
     pushCat('gentag', ['kl_gentag_n', 'kl_gentag_for_evigt']);
@@ -366,6 +360,7 @@ export function registerEgneToolbox(workspace, getBand) {
 export function installPythonGenerators() {
   const P = Blockly.Python;
   if (!P) return;
+  installFableGoGenerators(P);
 
   P['kl_arm_angle'] = function (block) {
     const axis = block.getFieldValue('AXIS');
