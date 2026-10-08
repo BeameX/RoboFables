@@ -121,24 +121,80 @@ html, body {
 }
 .main-panels {
   display: grid;
-  grid-template-columns: 1fr minmax(260px, 320px);
-  gap: 12px;
+  /* preview | 12px width handle | mission, and a 12px height-handle row under the preview.
+     --preview-w / --preview-h are set by the drag handles (js/app.js initPreviewResize). */
+  grid-template-columns: 1fr 12px minmax(260px, 320px);
+  grid-template-rows: var(--preview-h, auto) 12px;
+  grid-template-areas:
+    "stage  vsplit mission"
+    "hsplit corner mission";
+  gap: 0;
   min-height: 0;
   flex: 1 1 auto;
 }
+.main-panels.preview-sized {
+  grid-template-columns: var(--preview-w) 12px minmax(260px, 1fr);
+}
+.stage-wrap { grid-area: stage; }
+.mission { grid-area: mission; }
+.preview-splitter { grid-area: vsplit; cursor: col-resize; }
+.preview-splitter-h { grid-area: hsplit; cursor: row-resize; }
+.preview-corner { grid-area: corner; cursor: nwse-resize; }
+.preview-splitter, .preview-splitter-h, .preview-corner {
+  touch-action: none;
+  position: relative;
+  border-radius: 6px;
+  outline: none;
+}
+.preview-splitter::after, .preview-splitter-h::after, .preview-corner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: #3a4d66;
+  transition: background 0.15s ease;
+}
+.preview-splitter::after { width: 4px; height: 44px; }
+.preview-splitter-h::after { width: 44px; height: 4px; }
+.preview-corner::after { width: 8px; height: 8px; border-radius: 50%; }
+.preview-splitter:hover::after, .preview-splitter:focus-visible::after, .preview-splitter.dragging::after,
+.preview-splitter-h:hover::after, .preview-splitter-h:focus-visible::after, .preview-splitter-h.dragging::after,
+.preview-corner:hover::after, .preview-corner.dragging::after {
+  background: var(--accent2);
+}
+body.preview-resizing { user-select: none; }
+body.preview-resizing.resize-w { cursor: col-resize; }
+body.preview-resizing.resize-h { cursor: row-resize; }
+body.preview-resizing.resize-wh { cursor: nwse-resize; }
 @media (max-width: 900px) {
-  .main-panels { grid-template-columns: 1fr; }
+  .main-panels, .main-panels.preview-sized {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--preview-h, auto) 12px auto;
+    grid-template-areas: "stage" "hsplit" "mission";
+  }
+  .preview-splitter, .preview-corner { display: none; }
 }
 .main-panels.preview-hidden {
   grid-template-columns: 1fr;
+  grid-template-rows: auto;
+  grid-template-areas: "mission";
 }
-.main-panels.preview-hidden .stage-wrap {
+.main-panels.preview-hidden .stage-wrap,
+.main-panels.preview-hidden .preview-splitter,
+.main-panels.preview-hidden .preview-splitter-h,
+.main-panels.preview-hidden .preview-corner {
   display: none;
 }
 .main-panels.mission-hidden {
   grid-template-columns: 1fr;
+  grid-template-rows: var(--preview-h, auto) 12px;
+  grid-template-areas: "stage" "hsplit";
 }
-.main-panels.mission-hidden .mission {
+.main-panels.mission-hidden .mission,
+.main-panels.mission-hidden .preview-splitter,
+.main-panels.mission-hidden .preview-corner {
   display: none;
 }
 .main-panels.preview-hidden.mission-hidden {
@@ -150,6 +206,7 @@ html, body {
 }
 
 .stage-wrap {
+  container-type: inline-size; /* preview content scales with the panel width (cqw) */
   background: radial-gradient(ellipse at center, #1e2b3d 0%, var(--panel) 70%);
   border-radius: var(--radius);
   border: 1px solid #2c3a4f;
@@ -173,6 +230,7 @@ html, body {
   width: min(220px, 48vw);
   height: auto;
   max-height: 280px;
+  max-height: clamp(200px, 38cqw, 360px); /* ≈280px at the default width; grows/shrinks with the preview */
   overflow: visible;
   /* Enable Y pitch (rotateX) foreshortening in Preview */
   perspective: 520px;
@@ -642,9 +700,9 @@ html, body {
 }
 
 /* Fable Go preview: top-down robot + pretend sensors */
-.go-sim { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 360px; margin: 22px auto 0; font-size: 12px; }
+.go-sim { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 360px; max-width: clamp(220px, 48cqw, 440px); margin: 22px auto 0; font-size: 12px; }
 .go-sim[hidden] { display: none; }
-.go-arena { width: 100%; max-height: 330px; overflow: hidden; }
+.go-arena { width: 100%; max-height: 330px; max-height: clamp(200px, 44cqw, 420px); overflow: hidden; }
 .go-floor { fill: #2b3a4d; stroke: #55667c; }
 .go-wheel { fill: #20242b; stroke: #f2f5f8; stroke-width: 0.8; }
 .go-tread { stroke: #59616d; stroke-width: 0.5; }
@@ -655,3 +713,8 @@ html, body {
 .go-sim-sensors input[type=range] { flex: 1; }
 .go-sim-sensors output { width: 2.2em; text-align: right; }
 .stage-wrap:has(.go-sim:not([hidden])) { overflow: auto; justify-content: flex-start; }
+/* When the user has set a preview height, scale the content by width AND height. */
+.main-panels.preview-tall .stage-wrap { container-type: size; min-height: 0; }
+.main-panels.preview-tall .robot { max-height: clamp(160px, min(38cqw, 82cqh), 640px); }
+.main-panels.preview-tall .go-sim { max-width: clamp(220px, min(48cqw, 70cqh), 680px); }
+.main-panels.preview-tall .go-arena { max-height: clamp(180px, min(44cqw, 64cqh), 640px); }

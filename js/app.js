@@ -400,6 +400,123 @@ function setMissionVisible(visible) {
   resizeBlockly();
 }
 
+// ── Preview size (drag handles: right edge = width, bottom edge = height, corner = both) ──
+const PREVIEW_SIZE_KEY = 'robolab.previewSize'; // JSON {w, h} in px; a missing value means "automatic"
+const PREVIEW_MIN_W = 240;
+const PREVIEW_MIN_H = 200;
+const MISSION_MIN_W = 260;
+const SPLITTER_W = 12;
+
+function readPreviewSize() {
+  try {
+    const v = JSON.parse(localStorage.getItem(PREVIEW_SIZE_KEY) || '{}') || {};
+    const ok = (n) => (Number.isFinite(n) && n > 0 ? n : null);
+    return { w: ok(v.w), h: ok(v.h) };
+  } catch (_) {
+    return { w: null, h: null };
+  }
+}
+
+function clampPreviewWidth(w) {
+  const panels = document.getElementById('mainPanels');
+  const total = panels ? panels.clientWidth : window.innerWidth;
+  const max = Math.max(PREVIEW_MIN_W, total - SPLITTER_W - MISSION_MIN_W);
+  return Math.round(Math.max(PREVIEW_MIN_W, Math.min(max, w)));
+}
+
+function clampPreviewHeight(h) {
+  const max = Math.max(PREVIEW_MIN_H, window.innerHeight - 160);
+  return Math.round(Math.max(PREVIEW_MIN_H, Math.min(max, h)));
+}
+
+/** Set the preview size. null for w or h = back to automatic. save=true remembers it. */
+function applyPreviewSize({ w, h }, save = false) {
+  const panels = document.getElementById('mainPanels');
+  if (!panels) return;
+  const pw = w == null ? null : clampPreviewWidth(w);
+  const ph = h == null ? null : clampPreviewHeight(h);
+  if (pw == null) panels.style.removeProperty('--preview-w');
+  else panels.style.setProperty('--preview-w', `${pw}px`);
+  panels.classList.toggle('preview-sized', pw != null);
+  if (ph == null) panels.style.removeProperty('--preview-h');
+  else panels.style.setProperty('--preview-h', `${ph}px`);
+  panels.classList.toggle('preview-tall', ph != null);
+  if (save) {
+    try {
+      if (pw == null && ph == null) localStorage.removeItem(PREVIEW_SIZE_KEY);
+      else localStorage.setItem(PREVIEW_SIZE_KEY, JSON.stringify({ w: pw, h: ph }));
+    } catch (_) { /* ignore */ }
+  }
+  resizeBlockly();
+}
+
+/** Drag (mouse, pen or touch), arrow keys, or double-click (reset) on the preview's resize handles. */
+function initPreviewResize() {
+  const stage = document.getElementById('stageWrap');
+  if (!stage) return;
+  const current = () => readPreviewSize();
+  const handles = [
+    ['previewSplitter', { w: true, h: false }, 'resize-w'],
+    ['previewHSplitter', { w: false, h: true }, 'resize-h'],
+    ['previewCorner', { w: true, h: true }, 'resize-wh'],
+  ];
+  for (const [id, axes, cls] of handles) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    let drag = null;
+    const end = (e) => {
+      if (!drag) return;
+      try { el.releasePointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      el.classList.remove('dragging');
+      document.body.classList.remove('preview-resizing', cls);
+      applyPreviewSize(drag.last, true);
+      drag = null;
+    };
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const r = stage.getBoundingClientRect();
+      const saved = current();
+      drag = { x: e.clientX, y: e.clientY, w: r.width, h: r.height, saved, last: saved };
+      try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      el.classList.add('dragging');
+      document.body.classList.add('preview-resizing', cls);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      drag.last = {
+        w: axes.w ? drag.w + (e.clientX - drag.x) : drag.saved.w,
+        h: axes.h ? drag.h + (e.clientY - drag.y) : drag.saved.h,
+      };
+      applyPreviewSize(drag.last);
+    });
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('dblclick', () => {
+      const s = current();
+      applyPreviewSize({ w: axes.w ? null : s.w, h: axes.h ? null : s.h }, true);
+    });
+    el.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 64 : 16;
+      const r = stage.getBoundingClientRect();
+      const s = current();
+      if (axes.w && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        applyPreviewSize({ w: r.width + (e.key === 'ArrowRight' ? step : -step), h: s.h }, true);
+      } else if (axes.h && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        applyPreviewSize({ w: s.w, h: r.height + (e.key === 'ArrowDown' ? step : -step) }, true);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        applyPreviewSize({ w: axes.w ? null : s.w, h: axes.h ? null : s.h }, true);
+      }
+    });
+  }
+  // Keep a remembered size inside the window when it is resized (the saved value is not changed).
+  window.addEventListener('resize', () => applyPreviewSize(current()));
+  applyPreviewSize(current());
+}
+
 /** Kid-friendly connection status — driven by bridge/USB ping, not LED/Spin gates. */
 function updateConnChip() {
   const el = document.getElementById('connChip');
@@ -1211,6 +1328,7 @@ async function boot() {
   });
   setPreviewVisible(readPreviewVisible());
   setMissionVisible(readMissionVisible());
+  initPreviewResize();
   document.getElementById('btnCode').addEventListener('click', () => setDrawer(true));
   document.getElementById('btnCloseDrawer').addEventListener('click', () => setDrawer(false));
   document.getElementById('backdrop').addEventListener('click', () => setDrawer(false));
