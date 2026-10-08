@@ -1,5 +1,17 @@
 # RoboFables
 
+## Why RoboFables exists
+
+Our Coding Pirates chapter has access to many Fable Explore and Fable Go robots. After Shape Robotics went bankrupt, it became hard to get working versions of the Fable Blockly software. That left thousands of kroner worth of robots we could barely use. RoboFables was started so you can program these robots again.
+
+The software is 100% agentic engineered with [Grok Bot](https://grokbot.ai).
+
+You can run it locally, on your own server, or in the cloud. The repo includes a template that deploys to a free-tier Azure App Service, but you can of course host it anywhere that serves static files.
+
+You are welcome to clone the repo and to contribute to this project. Pull requests are reviewed by Grok Bot, because the maintainer does not have the time this project deserves to develop it by hand.
+
+## About
+
 RoboFables is a block-coding web app for classroom robots. Drag blocks, watch a preview of the arm, and press **Run** to move a joint over a USB wireless dongle.
 
 RoboFables is an open-source block-coding app for classroom robots, written as an independent alternative to Fable Blockly.
