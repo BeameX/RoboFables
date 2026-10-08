@@ -645,7 +645,10 @@ html, body {
 .go-sim { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 360px; margin: 22px auto 0; font-size: 12px; }
 .go-sim[hidden] { display: none; }
 .go-arena { width: 100%; max-height: 330px; overflow: hidden; }
-.go-floor { fill: #1b2430; stroke: #34404f; }
+.go-floor { fill: #2b3a4d; stroke: #55667c; }
+.go-wheel { fill: #20242b; stroke: #f2f5f8; stroke-width: 0.8; }
+.go-tread { stroke: #59616d; stroke-width: 0.5; }
+.go-sensor-tag { fill: #e6ebf2; font-weight: 600; }
 .go-sim-info { margin: 0; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .go-sim-sensors { border: 1px solid #34404f; border-radius: 6px; padding: 4px 8px; display: grid; grid-template-columns: 1fr; gap: 3px; }
 .go-sim-sensors label { display: flex; align-items: center; gap: 6px; justify-content: space-between; }

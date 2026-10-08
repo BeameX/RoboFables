@@ -22,6 +22,8 @@ const LED_HEX = {
   red: '#ff3b3b', green: '#3ddc5a', blue: '#3b7bff', yellow: '#ffe03b', magenta: '#ff3bd8',
   cyan: '#3bf0ff', white: '#ffffff', off: '#333a44',
 };
+/** Fill for the three front sensor spots on the simulator drawing. */
+const SPOT_HEX = { ...LED_HEX, black: '#0b0d10', none: '#4a525e' };
 const IR_OPTS = [
   ['A', '65'], ['B', '66'], ['C', '67'], ['D', '68'], ['X', '88'], ['Y', '89'], ['Z', '90'],
   ['space', '32'], ['1', '49'], ['2', '50'], ['3', '51'],
@@ -238,7 +240,7 @@ export const sim = {
   speedA: 0, speedB: 0, angleA: 0, angleB: 0,
   headlights: false, led: 'off',
   prox: [0, 0, 0], colour: ['none', 'none', 'none'], ambient: 50, directed: 20,
-  ir: 0, battery: 80,
+  ir: 0, battery: 80, irSentUntil: 0,
 };
 
 let lastT = 0;
@@ -326,6 +328,7 @@ export async function simExec(type, field, alive) {
     case 'fg_ir_send': {
       const lab = document.getElementById('goSimIrOut');
       if (lab) lab.textContent = `sent: ${String.fromCharCode(num('MSG'))}`;
+      sim.irSentUntil = Date.now() + 500; // the IR mark on the drawing flashes
       break;
     }
     default: break;
@@ -368,6 +371,29 @@ function renderRobot() {
   if (hl) hl.style.display = sim.headlights ? '' : 'none';
   const led = document.getElementById('goSimLed');
   if (led) led.setAttribute('fill', LED_HEX[sim.led] || LED_HEX.off);
+  for (const id of ['goSimLampL', 'goSimLampR']) {
+    const lamp = document.getElementById(id);
+    if (lamp) lamp.setAttribute('fill', sim.headlights ? '#fff6a8' : '#5b6470');
+  }
+  // Front sensors: index 0/1/2 = sensor 1/2/3 = left/centre/right as you look at the front.
+  for (let i = 0; i < 3; i++) {
+    const halo = document.getElementById(`goSimProx${i}`);
+    if (halo) {
+      const p = Math.max(0, Math.min(100, sim.prox[i])) / 100;
+      halo.setAttribute('r', (2.2 + p * 3.2).toFixed(2));
+      halo.setAttribute('opacity', (p * 0.75).toFixed(2));
+    }
+    const spot = document.getElementById(`goSimSpot${i}`);
+    if (spot) spot.setAttribute('fill', SPOT_HEX[sim.colour[i]] || SPOT_HEX.none);
+  }
+  const ir = document.getElementById('goSimIr');
+  if (ir) ir.setAttribute('fill', Date.now() < sim.irSentUntil ? '#ff4d4d' : sim.ir ? '#ff9a3c' : '#4a2a30');
+  const batt = document.getElementById('goSimBatt');
+  if (batt) {
+    const b = Math.max(0, Math.min(100, sim.battery));
+    batt.setAttribute('width', ((b / 100) * 6.4).toFixed(2));
+    batt.setAttribute('fill', b > 50 ? '#3ddc5a' : b > 20 ? '#ffe03b' : '#ff3b3b');
+  }
   const info = document.getElementById('goSimInfo');
   if (info) info.textContent = `A ${sim.speedA}% · B ${sim.speedB}%`;
 }
@@ -384,18 +410,23 @@ export function mountSimPanel(host) {
     <svg viewBox="0 0 ${ARENA} ${ARENA}" class="go-arena" aria-label="Fable Go preview seen from above">
       <rect x="0" y="0" width="${ARENA}" height="${ARENA}" rx="4" class="go-floor"/>
       <g id="goSimRobot">
-        <g id="goSimBeams"><path d="M-10,-14 L-18,-40 L-2,-40 Z M10,-14 L2,-40 L18,-40 Z" fill="#fff8c0" opacity="0.45"/></g>
-        <rect x="-15" y="-9" width="6" height="18" rx="2" fill="#222"/>
-        <rect x="9" y="-9" width="6" height="18" rx="2" fill="#222"/>
-        <rect x="-10" y="-14" width="20" height="26" rx="5" fill="#e9edf2" stroke="#9aa3b0"/>
-        <rect x="-8" y="-14" width="16" height="4" rx="1.5" fill="#29303a"/>
-        <circle id="goSimLed" cx="0" cy="2" r="3.2" fill="${LED_HEX.off}"/>
-        <text x="-13" y="14" font-size="6" fill="#9aa3b0">A</text><text x="10" y="14" font-size="6" fill="#9aa3b0">B</text>
+        <g id="goSimBeams"><path d="M-8.6,-14 L-17,-40 L-1,-40 Z M8.6,-14 L1,-40 L17,-40 Z" fill="#fff8c0" opacity="0.45"/></g>
+        <rect x="-15" y="-9" width="6" height="18" rx="2" class="go-wheel"/>
+        <rect x="9" y="-9" width="6" height="18" rx="2" class="go-wheel"/>
+        <path d="M-15,-5 h6 M-15,-1 h6 M-15,3 h6 M9,-5 h6 M9,-1 h6 M9,3 h6" class="go-tread"/>
+        <rect x="-10" y="-14" width="20" height="26" rx="5" fill="#e9edf2" stroke="#9aa3b0" stroke-width="0.6"/>
+        <rect x="-9" y="-14" width="18" height="5" rx="1.5" fill="#29303a"/>
+        <circle id="goSimLampL" cx="-8.6" cy="-14.2" r="1.1" fill="#5b6470"/><circle id="goSimLampR" cx="8.6" cy="-14.2" r="1.1" fill="#5b6470"/>
+        ${[0, 1, 2].map((i) => { const x = [5.6, 0, -5.6][i]; return `<g><title>Sensor ${i + 1} (${SENSOR_OPTS[i][0]} as you look at the front)</title><circle id="goSimProx${i}" cx="${x}" cy="-12.6" r="2.2" fill="#ff9a3c" opacity="0"/><circle id="goSimSpot${i}" cx="${x}" cy="-12.6" r="1.9" fill="${SPOT_HEX.none}" stroke="#c9d1db" stroke-width="0.35"/><text x="${x}" y="-16.4" font-size="3.4" text-anchor="middle" class="go-sensor-tag">${'LCR'[i]}</text></g>`; }).join('')}
+        <g><title>IR sender and receiver</title><rect id="goSimIr" x="-2.4" y="-8.4" width="4.8" height="2.2" rx="0.8" fill="#4a2a30"/><text x="0" y="-4.2" font-size="1.9" text-anchor="middle" fill="#6b7480">IR</text></g>
+        <circle id="goSimLed" cx="0" cy="1.5" r="3.2" fill="${LED_HEX.off}" stroke="#9aa3b0" stroke-width="0.4"/>
+        <g><title>Battery</title><rect x="-3.6" y="6.4" width="7" height="3" rx="0.6" fill="#29303a" stroke="#6b7480" stroke-width="0.35"/><rect x="3.4" y="7.3" width="0.8" height="1.2" fill="#6b7480"/><rect id="goSimBatt" x="-3.3" y="6.7" width="5" height="2.4" rx="0.4" fill="#3ddc5a"/></g>
+        <text x="-13" y="14" font-size="6" fill="#c9d1db">A</text><text x="10" y="14" font-size="6" fill="#c9d1db">B</text>
       </g>
     </svg>
     <p class="go-sim-info"><span id="goSimInfo"></span> <span id="goSimIrOut"></span>
       <button type="button" id="goSimReset">Back to start</button></p>
-    <fieldset class="go-sim-sensors"><legend>Pretend sensors (drag to test your program)</legend>
+    <fieldset class="go-sim-sensors"><legend>Pretend sensors (drag to test your program). Left/right = as you look at the robot's front (L C R on the drawing).</legend>
       ${slider('prox0', 'Distance left', 0)}${slider('prox1', 'Distance centre', 0)}${slider('prox2', 'Distance right', 0)}
       <label>Colour left ${colourSel(0)}</label><label>Colour centre ${colourSel(1)}</label><label>Colour right ${colourSel(2)}</label>
       ${slider('ambient', 'Room light', sim.ambient)}${slider('directed', 'Reflected light', sim.directed)}${slider('battery', 'Battery', sim.battery)}
