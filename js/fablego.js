@@ -228,7 +228,10 @@ export function installFableGoGenerators(P) {
 const CM_PER_S_AT_100 = 33.7; // 60 RPM × π × 10.74 cm wheel
 const AXLE_CM = 12.14;
 const WHEEL_CIRC_CM = Math.PI * 10.74;
-const ARENA = 200; // px; 1 px = 1 cm
+// The arena is ARENA × ARENA cm (1 SVG unit = 1 cm). The SVG is drawn up to 330 px tall (css/app.css .go-arena),
+// so 100 cm gives ~3.3 px per cm: the robot shows about 3× larger than the old 200 cm / 220 px view.
+const ARENA = 100;
+const ROBOT_R = 21; // cm from the robot's centre to its farthest corner (wheels/body), keeps it inside the floor
 
 export const sim = {
   x: ARENA / 2, y: ARENA / 2, heading: -90, // degrees, -90 = up
@@ -251,8 +254,8 @@ function tick(t) {
     const w = ((vA - vB) / AXLE_CM) * (180 / Math.PI); // A=left: A faster → turn right (clockwise on screen)
     sim.heading += w * dt;
     const r = (sim.heading * Math.PI) / 180;
-    sim.x = Math.max(12, Math.min(ARENA - 12, sim.x + Math.cos(r) * v * dt));
-    sim.y = Math.max(12, Math.min(ARENA - 12, sim.y + Math.sin(r) * v * dt));
+    sim.x = Math.max(ROBOT_R, Math.min(ARENA - ROBOT_R, sim.x + Math.cos(r) * v * dt));
+    sim.y = Math.max(ROBOT_R, Math.min(ARENA - ROBOT_R, sim.y + Math.sin(r) * v * dt));
     sim.angleA += (vA * dt / WHEEL_CIRC_CM) * 360;
     sim.angleB += (vB * dt / WHEEL_CIRC_CM) * 360;
   }
@@ -379,7 +382,7 @@ export function mountSimPanel(host) {
   const slider = (key, label, val) => `<label>${label}<input type="range" min="0" max="100" value="${val}" data-key="${key}"><output>${val}</output></label>`;
   wrap.innerHTML = `
     <svg viewBox="0 0 ${ARENA} ${ARENA}" class="go-arena" aria-label="Fable Go preview seen from above">
-      <rect x="0" y="0" width="${ARENA}" height="${ARENA}" rx="8" class="go-floor"/>
+      <rect x="0" y="0" width="${ARENA}" height="${ARENA}" rx="4" class="go-floor"/>
       <g id="goSimRobot">
         <g id="goSimBeams"><path d="M-10,-14 L-18,-40 L-2,-40 Z M10,-14 L2,-40 L18,-40 Z" fill="#fff8c0" opacity="0.45"/></g>
         <rect x="-15" y="-9" width="6" height="18" rx="2" fill="#222"/>
