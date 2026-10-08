@@ -4,7 +4,7 @@
 
 Our Coding Pirates chapter has access to many Fable Explore and Fable Go robots. After Shape Robotics went bankrupt, it became hard to get working versions of the Fable Blockly software. That left thousands of kroner worth of robots we could barely use. RoboFables was started so you can program these robots again.
 
-The software is 100% agentic engineered with [Grok Bot](https://grokbot.ai).
+The software is 100% agentic engineered with Grok Bot.
 
 You can run it locally, on your own server, or in the cloud. The repo includes a template that deploys to a free-tier Azure App Service, but you can of course host it anywhere that serves static files.
 
